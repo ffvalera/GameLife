@@ -25,6 +25,7 @@ namespace GameLife
     {
         const int FieldSize = 20;
         const int CellSize = 20;
+        const string cellName = "cell";
         Color DeadColor = Color.GreenYellow;
         Color AliveColor = Color.DeepPink;
         int CountToLive = 2;
@@ -34,11 +35,9 @@ namespace GameLife
             new Coord(-1, -1), new Coord(0, -1), new Coord(1, -1), new Coord(1, 0) };
         FileController fc = new FileController();
 
+
         Button[,] Field = new Button[FieldSize, FieldSize];
         
-
-       
-
         public Form1()
         {
             InitializeComponent();
@@ -50,11 +49,15 @@ namespace GameLife
             BackColor = Color.Black;
             Coord.n = FieldSize;
             string s = fc.Download();
+            this.FormClosing += Form1_FormClosing;
             CreateBoard(s);
 
         }
         void CreateBoard(string s)
         {
+            Controls.Find(cellName, true).ToList().ForEach(elem => Controls.Remove(elem));
+
+            Controls.RemoveByKey(cellName);
 
             for (int i = 0; i < FieldSize; i++)
             {
@@ -64,9 +67,8 @@ namespace GameLife
 
                     button.Location = new Point(j * CellSize, i * CellSize);
                     button.Size = new Size(CellSize, CellSize);
-                  //  button.Click += new EventHandler(Click);
-                    button.MouseDown += new MouseEventHandler(Click);
-
+                    button.MouseDown += new MouseEventHandler(Cell_click);
+                    button.Name = cellName;
                     button.FlatAppearance.BorderSize = 1;
                     button.FlatAppearance.BorderColor = Color.White;
                     button.FlatStyle = FlatStyle.Flat;
@@ -89,30 +91,6 @@ namespace GameLife
                 }
             }
         }
-        void Click(object sender, EventArgs e)
-        {
-            
-            Button button = (Button)sender;
-            Cell cell = (Cell)button.Tag;
-            if(cell.Status == CellStatus.Dead)
-            {
-                cell.Status = CellStatus.Alive;                
-                button.BackColor = AliveColor;
-            }
-            else
-            {
-                cell.Status = cell.Status = CellStatus.Dead;
-                button.BackColor = DeadColor;
-            }
-            cell.NextStatus = cell.Status;
-            button.Tag = cell;
-        }
-
-
-        private void Form1_FormClosing(Object sender, FormClosingEventArgs e)
-        {
-            fc.Safe(Field);
-        }  
         void SetStatus(ref Button button)
         {
             Cell cell =(Cell)button.Tag;
@@ -128,8 +106,7 @@ namespace GameLife
                 button.BackColor = AliveColor;
             }
             button.Tag = cell;
-        }
-        
+        }        
         void UpdateStatus(ref Button button)
         {
             Cell cell = (Cell)button.Tag;
@@ -148,10 +125,30 @@ namespace GameLife
                 cell.NextStatus = CellStatus.Dead;
             button.Tag = cell;
         }
-
-        private void Turn_click(object sender, EventArgs e)
+        void Cell_click(object sender, EventArgs e)
         {
-
+            
+            Button button = (Button)sender;
+            Cell cell = (Cell)button.Tag;
+            if(cell.Status == CellStatus.Dead)
+            {
+                cell.Status = CellStatus.Alive;                
+                button.BackColor = AliveColor;
+            }
+            else
+            {
+                cell.Status = cell.Status = CellStatus.Dead;
+                button.BackColor = DeadColor;
+            }
+            cell.NextStatus = cell.Status;
+            button.Tag = cell;
+        }
+        private void Form1_FormClosing(Object sender, FormClosingEventArgs e)
+        {
+            fc.Save(Field);
+        }  
+        private void Turn_click(object sender, EventArgs e)
+        {          
             for (int i = 0; i < FieldSize; i++)
                 for (int j = 0; j < FieldSize; j++)
                 {
@@ -165,5 +162,25 @@ namespace GameLife
                 }
         }
 
+        private void Save_click(object sender, EventArgs e)
+        {
+            fc.Save(Field, fc.GetFileNameForSaving());
+        }
+        private void Clear_Click(object sender, EventArgs e)
+        {
+            for(int i = 0; i < FieldSize; i++)
+                for(int j = 0; j < FieldSize; j++)
+                {
+                    Cell cell = (Cell)Field[i, j].Tag;
+                    cell.Status = CellStatus.Dead;
+                    cell.NextStatus = CellStatus.Dead;
+                    Field[i, j].Tag = cell;
+                    Field[i, j].BackColor = DeadColor;
+                }
+        }
+        private void Download_click(object sender, EventArgs e)
+        {         
+            CreateBoard(fc.Download(fc.GetFileNameForDownloading()));
+        }
     }
 }
