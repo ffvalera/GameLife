@@ -49,9 +49,8 @@ namespace GameLife
             BackColor = Color.Black;
             Coord.n = FieldSize;
             string s = fc.Download();
-            this.FormClosing += Form1_FormClosing;
+            this.FormClosing += new FormClosingEventHandler(Form_Closing);
             CreateBoard(s);
-
         }
         void CreateBoard(string s)
         {
@@ -143,9 +142,20 @@ namespace GameLife
             cell.NextStatus = cell.Status;
             button.Tag = cell;
         }
-        private void Form1_FormClosing(Object sender, FormClosingEventArgs e)
+        private void Form_Closing(object sender, FormClosingEventArgs e)
         {
-            fc.Save(Field);
+            const string message = "Сохранить текущее поле?";
+            const string caption = "Form Closing";
+            var result = MessageBox.Show(message, caption,
+                                         MessageBoxButtons.YesNo,
+                                         MessageBoxIcon.Question);
+
+            // If the no button was pressed ...
+            if (result == DialogResult.Yes)
+            {
+                fc.Save(Field);
+            }
+
         }  
         private void Turn_click(object sender, EventArgs e)
         {          
@@ -181,6 +191,11 @@ namespace GameLife
         private void Download_click(object sender, EventArgs e)
         {         
             CreateBoard(fc.Download(fc.GetFileNameForDownloading()));
+        }
+
+        private void Generate_Click(object sender, EventArgs e)
+        {
+            CreateBoard(String.Join("", Enumerable.Range(0, 400).Select(a => (new Random().Next(2)).ToString())));
         }
     }
 }

@@ -30,35 +30,25 @@ namespace GameLife
 
             File.WriteAllText(fullname, s);
         }
-        public string GetFileNameForSaving()
+        private string GetFileName(FileDialog fileDialog)
         {
-            Stream myStream;
-            SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+            fileDialog.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+            fileDialog.FilterIndex = 2;
+            fileDialog.RestoreDirectory = true;
 
-            saveFileDialog1.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
-            saveFileDialog1.FilterIndex = 2;
-            saveFileDialog1.RestoreDirectory = true;
-
-            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+            if (fileDialog.ShowDialog() == DialogResult.OK)
             {
-                return saveFileDialog1.FileName;
+                return fileDialog.FileName;
             }
             return "";
         }
+        public string GetFileNameForSaving()
+        {
+            return GetFileName(new SaveFileDialog());
+        }
         public string GetFileNameForDownloading()
         {
-            Stream myStream;
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-
-            openFileDialog.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
-            openFileDialog.FilterIndex = 2;
-            openFileDialog.RestoreDirectory = true;
-
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
-            {
-                return openFileDialog.FileName;
-            }
-            return "";
+            return GetFileName(new OpenFileDialog());
         }
         public string Download(string fullname = PathToSaves + "/"+autosave)
         {
