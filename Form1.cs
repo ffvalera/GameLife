@@ -19,24 +19,21 @@ namespace GameLife
             return new Coord((a.X + b.X + n) % n, (a.Y + b.Y + n) % n);
         }
     }
-    record struct Cell(CellStatus Status, CellStatus NextStatus, Coord Coord);
+    record class Cell(CellStatus status = CellStatus.Dead, CellStatus nextStatus = CellStatus.Dead)
+    {
+        public CellStatus Status = status;
+        public CellStatus NextStatus = nextStatus;        
+    };
 
     public partial class Form1 : Form
     {
-        const int FieldSize = 20;
+        Field field;
         const int CellSize = 20;
         const string cellName = "cell";
         Color DeadColor = Color.GreenYellow;
         Color AliveColor = Color.DeepPink;
-        int CountToLive = 2;
-        int CountToBurn = 3;
-        int CountToDead = 4;
-        Coord[] Neighbors = { new Coord(1, 1), new Coord(0, 1), new Coord(-1, 1), new Coord(-1, 0),
-            new Coord(-1, -1), new Coord(0, -1), new Coord(1, -1), new Coord(1, 0) };
         FileController fc = new FileController();
-
-
-        Button[,] Field = new Button[FieldSize, FieldSize];
+        Button[,] Buttons;
         
         public Form1()
         {
@@ -45,22 +42,20 @@ namespace GameLife
         }
         void Init()
         {
-
-            BackColor = Color.Black;
-            Coord.n = FieldSize;
-            string s = fc.Download();
+            BackColor = Color.Black;            
+            field = fc.Download();
+            Coord.n = field.FieldSize;
             this.FormClosing += new FormClosingEventHandler(Form_Closing);
-            CreateBoard(s);
+            CreateBoard(field);
         }
-        void CreateBoard(string s)
-        {
-            Controls.Find(cellName, true).ToList().ForEach(elem => Controls.Remove(elem));
+        void CreateBoard(Field field)
+        {        
+            this.field = field;
+            Buttons = new Button[field.FieldSize, field.FieldSize];
 
-            Controls.RemoveByKey(cellName);
-
-            for (int i = 0; i < FieldSize; i++)
+            for (int i = 0; i < field.FieldSize; i++)
             {
-                for (int j = 0; j < FieldSize; j++)
+                for (int j = 0; j < field.FieldSize; j++)
                 {
                     Button button = new Button();
 
@@ -72,130 +67,96 @@ namespace GameLife
                     button.FlatAppearance.BorderColor = Color.White;
                     button.FlatStyle = FlatStyle.Flat;
 
-                    Cell cell;
-                    if (s[FieldSize * i + j] == '0')
-                    {
-                        cell = new Cell(CellStatus.Dead, CellStatus.Dead, new Coord(i, j));
-                        button.BackColor = DeadColor;
-                    }
-                    else
-                    {
-                        cell = new Cell(CellStatus.Alive, CellStatus.Alive, new Coord(i, j));
-                        button.BackColor = AliveColor;
-                    }
-
-                    button.Tag = cell;
-                    Field[i, j] = button;
-                    this.Controls.Add(button);
+                    Cell cell = field.cells[i][j];
+                    UpdateButton(ref button, cell);
+                    button.Tag = new Coord(i, j);
+                    Buttons[i,j] = button;
+                    this.Controls.Add(Buttons[i, j]);
                 }
             }
         }
-        void SetStatus(ref Button button)
+        void UpdateBoard(Field? f)
         {
-            Cell cell =(Cell)button.Tag;
-            CellStatus status = cell.NextStatus;
-
-            cell.Status = status;
-            if(status == CellStatus.Dead)
-            {
-                button.BackColor = DeadColor;
-            }
-            else
-            {
-                button.BackColor = AliveColor;
-            }
-            button.Tag = cell;
-        }        
-        void UpdateStatus(ref Button button)
-        {
-            Cell cell = (Cell)button.Tag;
-            int alive_count = 0;
-            foreach(var p in Neighbors)
-            {
-                Coord c = cell.Coord + p;
-                Cell neighbor = (Cell)Field[c.X, c.Y].Tag;
-                if(neighbor.Status == CellStatus.Alive)
-                    alive_count++;
-            }
-
-            if (alive_count == CountToBurn && cell.Status == CellStatus.Dead)
-                cell.NextStatus = CellStatus.Alive;
-            else if ((alive_count < CountToLive || alive_count >= CountToDead) && cell.Status == CellStatus.Alive)
-                cell.NextStatus = CellStatus.Dead;
-            button.Tag = cell;
+            if (f == null)
+                return;
+            field = f;
+            for (int i = 0; i < field.FieldSize; i++)
+                for (int j = 0; j < field.FieldSize; j++)
+                    UpdateButton(ref Buttons[i, j], f.cells[i][j]);
         }
-        void Cell_click(object sender, EventArgs e)
+        void UpdateButton(ref Button button, Cell cell)
         {
-            
-            Button button = (Button)sender;
-            Cell cell = (Cell)button.Tag;
-            if(cell.Status == CellStatus.Dead)
+            if (cell.Status == CellStatus.Dead)
             {
-                cell.Status = CellStatus.Alive;                
-                button.BackColor = AliveColor;
+                button.BackColor = DeadColor;
             }
             else
             {
-                cell.Status = cell.Status = CellStatus.Dead;
-                button.BackColor = DeadColor;
+                button.BackColor = AliveColor;
             }
+        }
+       
+        
+        void Cell_click(object sender, EventArgs e)
+        {            
+            Button button = (Button)sender;
+            Cell cell = field[(Coord)button.Tag];
+
+            cell.Status = 1 - cell.Status;
+
+            UpdateButton(ref button, cell);
             cell.NextStatus = cell.Status;
-            button.Tag = cell;
         }
         private void Form_Closing(object sender, FormClosingEventArgs e)
         {
             const string message = "Сохранить текущее поле?";
-            const string caption = "Form Closing";
-            var result = MessageBox.Show(message, caption,
-                                         MessageBoxButtons.YesNo,
-                                         MessageBoxIcon.Question);
+            var result = MessageBox.Show(message, "", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-            // If the no button was pressed ...
             if (result == DialogResult.Yes)
             {
-                fc.Save(Field);
+                fc.Save(field);
             }
-
         }  
         private void Turn_click(object sender, EventArgs e)
         {          
-            for (int i = 0; i < FieldSize; i++)
-                for (int j = 0; j < FieldSize; j++)
-                {
-                    UpdateStatus(ref Field[i, j]);
-                }
+            field.UpdateStatus();            
 
-            for (int i = 0; i < FieldSize; i++)
-                for (int j = 0; j < FieldSize; j++)
+            for (int i = 0; i < field.FieldSize; i++)
+                for (int j = 0; j < field.FieldSize; j++)
                 {
-                    SetStatus(ref Field[i, j]);
+                    field.cells[i][j].Status = field.cells[i][j].NextStatus;
+                    UpdateButton(ref Buttons[i, j], field.cells[i][j]);
                 }
         }
 
         private void Save_click(object sender, EventArgs e)
         {
-            fc.Save(Field, fc.GetFileNameForSaving());
+            fc.Save(field, fc.GetFileNameForSaving());
         }
         private void Clear_Click(object sender, EventArgs e)
         {
-            for(int i = 0; i < FieldSize; i++)
-                for(int j = 0; j < FieldSize; j++)
-                {
-                    Cell cell = (Cell)Field[i, j].Tag;
-                    cell.Status = CellStatus.Dead;
-                    cell.NextStatus = CellStatus.Dead;
-                    Field[i, j].Tag = cell;
-                    Field[i, j].BackColor = DeadColor;
+            for(int i = 0; i < field.FieldSize; i++)
+                for(int j = 0; j < field.FieldSize; j++)
+                {                
+                    field.cells[i][j].Status = field.cells[i][j].NextStatus = CellStatus.Dead;
+                    UpdateButton(ref Buttons[i, j], field.cells[i][j]);
                 }
         }
         private void Download_click(object sender, EventArgs e)
         {         
-            CreateBoard(fc.Download(fc.GetFileNameForDownloading()));
+            UpdateBoard(fc.Download(fc.GetFileNameForDownloading()));
         }
 
         private void Generate_Click(object sender, EventArgs e)
         {
-            CreateBoard(String.Join("", Enumerable.Range(0, 400).Select(a => (new Random().Next(2)).ToString())));
+            Random r = new Random();
+            Field f = new Field();
+
+            for (int i = 0; i < field.FieldSize; i++)
+                for (int j = 0; j < field.FieldSize; j++)
+                    f.cells[i][j].Status = f.cells[i][j].NextStatus = r.Next(2) == 0 ? CellStatus.Alive : CellStatus.Dead;
+
+            UpdateBoard(f);
         }
     }
 }

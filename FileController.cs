@@ -1,36 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GameLife
+﻿namespace GameLife
 {
     internal class FileController
     {
         const string PathToSaves = "../../../Saves";
         const string autosave = "autosave.txt";
-        string standartField =new string('0', 400);
+        string standartField;
 
-        public void Save(Button[,] Field, string fullname = PathToSaves + "/" + autosave)        
+        char stringN = ' ';
+        public FileController()
         {
+             standartField = String.Join(" ", (new int[20]).Select(s => "00000000000000000000"));
+        }
+        public void Save(Field field, string fullname = PathToSaves + "/" + autosave)        
+        {
+            if(fullname == null)
+                return;
+
             string s = "";
-            for(int i = 0; i < Field.GetLength(0); i++)
-                for(int j =0; j <Field.GetLength(1); j++)
+            for (int i = 0; i < field.cells.Length; i++)
+            {
+                for (int j = 0; j < field.cells[0].Length; j++)
                 {
-                    if (((Cell)Field[i, j].Tag).Status == CellStatus.Alive)
+                    if (field.cells[i][j].Status == CellStatus.Alive)
                         s += "1";
                     else
                         s += "0";
                 }
+                s += stringN;
+            }
 
             if (!File.Exists(fullname))
                 File.Create(fullname).Close();
 
             File.WriteAllText(fullname, s);
         }
-        private string GetFileName(FileDialog fileDialog)
+        private string? GetFileName(FileDialog fileDialog)
         {
             fileDialog.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
             fileDialog.FilterIndex = 2;
@@ -40,22 +44,34 @@ namespace GameLife
             {
                 return fileDialog.FileName;
             }
-            return "";
+            return null;
         }
-        public string GetFileNameForSaving()
+        public string? GetFileNameForSaving()
         {
             return GetFileName(new SaveFileDialog());
         }
-        public string GetFileNameForDownloading()
+        public string? GetFileNameForDownloading()
         {
             return GetFileName(new OpenFileDialog());
         }
-        public string Download(string fullname = PathToSaves + "/"+autosave)
+        public Field? Download(string fullname = PathToSaves + "/"+autosave)
         {
+            string? s;
+            if (fullname == null)
+                return null;
             if (File.Exists(fullname))
-                return File.ReadAllText(fullname);
+                s= File.ReadAllText(fullname);
             else
-                return standartField;
+                s= standartField;
+
+
+            Field field = new Field();
+
+            var t = s.Split(stringN).Select(x => x.ToCharArray());
+ 
+            field.cells = t.Select(x => x.Select(y => y == '1' ? new Cell(CellStatus.Alive, CellStatus.Alive):
+                                                                 new Cell(CellStatus.Dead, CellStatus.Dead) ).ToArray()).ToArray();                        
+            return field;
         }
     }
 }
