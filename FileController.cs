@@ -17,7 +17,7 @@
                 return;
 
             string s = "";
-            for (int i = 0; i < field.cells.Length; i++)
+            for (int i = 0; i < field.cells[0].Length; i++)
             {
                 for (int j = 0; j < field.cells[0].Length; j++)
                 {
@@ -70,7 +70,8 @@
             var t = s.Split(stringN).Select(x => x.ToCharArray());
  
             field.cells = t.Select(x => x.Select(y => y == '1' ? new Cell(CellStatus.Alive, CellStatus.Alive):
-                                                                 new Cell(CellStatus.Dead, CellStatus.Dead) ).ToArray()).ToArray();                        
+                                                                 new Cell(CellStatus.Dead, CellStatus.Dead) ).ToArray()).ToArray();  
+            field.cells.Resize(field.FieldSize);
             return field;
         }
     }
