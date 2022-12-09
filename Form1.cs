@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using System.Drawing;
+using System.Globalization;
+
 namespace GameLife
 {
     enum CellStatus
@@ -19,15 +23,11 @@ namespace GameLife
             return new Coord((a.X + b.X + n) % n, (a.Y + b.Y + n) % n);
         }
     }
-    record class Cell(CellStatus status = CellStatus.Dead, CellStatus nextStatus = CellStatus.Dead)
-    {
-        public CellStatus Status = status;
-        public CellStatus NextStatus = nextStatus;        
-    };
+
 
     public partial class Form1 : Form
     {
-        const int CellSize = 20;
+
         const string cellName = "cell";
         Color DeadColor = Color.GreenYellow;
         Color AliveColor = Color.DeepPink;
@@ -39,6 +39,7 @@ namespace GameLife
         int shiftx = 40, shifty = 2;
         bool isPlayed = false;
         Field field;
+        int CellSize = 20;
 
         public Form1()
         {
@@ -54,28 +55,36 @@ namespace GameLife
             textBox1.Text = field.FieldSize.ToString();
 
             this.FormClosing += new FormClosingEventHandler(Form_Closing);
+            this.MouseWheel += new MouseEventHandler(Pb_MouseWheel);
 
             pictureBox.Location = new Point(shiftx, shifty);
             pictureBox.Size = new Size(field.FieldSize*CellSize+shiftx, field.FieldSize * CellSize + shifty);
             pictureBox.MouseClick += Cell_click;
             pictureBox.Paint += new PaintEventHandler(pictureBox1_Paint);
+            pictureBox.MouseMove += new MouseEventHandler(Pb_MouseMove);
             Controls.Add(pictureBox);
 
-            timer.Interval = 100; //интервал между срабатываниями 1000 миллисекунд
-            timer.Tick += new EventHandler(timer_Tick); //подписываемся на события Tick
+            timer.Interval = 100;
+            timer.Tick += new EventHandler(timer_Tick);
             timer.Start();
         }
 
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {    
             Graphics g = e.Graphics;
+            g.FillRectangle(new SolidBrush(DeadColor),shiftx, shifty, CellSize * field.FieldSize, CellSize * field.FieldSize);
+
 
             for (int i = 0; i < field.FieldSize; i++)
                 for (int j = 0; j < field.FieldSize; j++)
                 {
-                    Brush b = new SolidBrush(field.cells[i][j].Status == CellStatus.Dead ? DeadColor : AliveColor);
-                    g.FillRectangle(b, i * CellSize + shiftx, j * CellSize + shifty, CellSize, CellSize);
-                    g.DrawRectangle(new Pen(Color.White), i * CellSize + shiftx, j * CellSize + shifty, CellSize, CellSize);
+                    if (field.cells[i][j].Status == CellStatus.Alive)
+                    {
+                        Brush b = new SolidBrush(AliveColor);
+                        g.FillRectangle(b, i * CellSize + shiftx, j * CellSize + shifty, CellSize, CellSize);
+                       // g.DrawRectangle(new Pen(Color.White), i * CellSize + shiftx, j * CellSize + shifty, CellSize, CellSize);
+                    }
+                    
                 }
         }
 
@@ -109,7 +118,19 @@ namespace GameLife
                 for (int j = 0; j < field.FieldSize; j++)
                 {
                     field.cells[i][j].Status = field.cells[i][j].NextStatus;
+
+                    if (field.cells[i][j].Status == CellStatus.Alive)
+                        field.cells[i][j].lifetime++;
+                    else
+                        field.cells[i][j].lifetime = 0;
                 }
+            pictureBox.Invalidate();
+        }
+        
+        private void Resize(int size)
+        {
+            field = new Field(size);
+            pictureBox.Size = new Size(field.FieldSize * CellSize + shiftx, field.FieldSize * CellSize + shifty);
             pictureBox.Invalidate();
         }
         private void Turn_click(object sender, EventArgs e)
@@ -151,7 +172,6 @@ namespace GameLife
             pictureBox.Invalidate();
         }
 
-
         private void Play_Click(object sender, EventArgs e)
         {
             var b = sender as Button;
@@ -168,17 +188,35 @@ namespace GameLife
                 makeTurn(); 
         }
 
-        private void Confirm_Click(object sender, EventArgs e)
+        void Confirm_Click(object sender, EventArgs e)
         {
             int size; 
 
             if (int.TryParse(textBox1.Text, out size))
             {
-                field = new Field(size);
-                pictureBox.Size = new Size(field.FieldSize * CellSize + shiftx, field.FieldSize * CellSize + shifty);
-                pictureBox.Invalidate();
+                Resize(size);
             }
             textBox1.Text = field.FieldSize.ToString();
+        }
+        void Pb_MouseMove(object sender, MouseEventArgs e)
+        {
+            int CursorX = e.X;
+            int CursorY = e.Y;
+            Coord c = new Coord((CursorX - shiftx) / CellSize, (CursorY - shifty) / CellSize);
+
+            if (c.X < 0 || c.X >= field.FieldSize || c.Y < 0 || c.Y >= field.FieldSize)
+                return;
+
+            this.Text = field[c].lifetime.ToString();
+        }
+        void Pb_MouseWheel(object sender, MouseEventArgs e)
+        {
+            int a = e.Delta/20;
+            if (CellSize + a > 0)
+            {
+                CellSize += a;
+                pictureBox.Invalidate();
+            }
         }
     }
 }

@@ -1,4 +1,8 @@
-﻿namespace GameLife
+﻿using System.Diagnostics;
+using System.Text;
+using System.Text.Json.Serialization.Metadata;
+
+namespace GameLife
 {
     internal class FileController
     {
@@ -9,30 +13,30 @@
         
         public FileController()
         {
-             standartField = "20\n"+String.Join(" ", (new int[20]).Select(s => "00000000000000000000"));
+             standartField = "20\n"+String.Join("", (new int[20]).Select(s => "00000000000000000000"));
         }
         public void Save(Field field, string fullname = PathToSaves + "/" + autosave)        
         {
             if(fullname == null)
                 return;
-
-            string s = field.FieldSize.ToString() + '\n';
+            
+            StringBuilder sb = new StringBuilder(field.FieldSize*field.FieldSize + 10);
+            sb.AppendLine(field.FieldSize.ToString());
             for (int i = 0; i < field.cells.Length; i++)
             {
                 for (int j = 0; j < field.cells[0].Length; j++)
                 {
-                    if (field.cells[i][j].Status == CellStatus.Alive)
-                        s += "1";
-                    else
-                        s += "0";
-                }
-                s += ' ';
+                    if (field.cells[i][j].Status == CellStatus.Alive)                        
+                        sb.Append("1");
+                    else                        
+                        sb.Append("0");
+                }                
             }
 
             if (!File.Exists(fullname))
                 File.Create(fullname).Close();
 
-            File.WriteAllText(fullname, s);
+            File.WriteAllText(fullname, sb.ToString());
         }
         private string? GetFileName(FileDialog fileDialog)
         {
@@ -67,13 +71,13 @@
             
 
             var x = s.Split('\n');
-            Field field = new Field(int.Parse(x[0]));            
-            var t = x[1].Split(' ').Select(x => x.ToCharArray());
- 
-            field.cells = t.Select(x => x.Select(y => y == '1' ? new Cell(CellStatus.Alive, CellStatus.Alive):
-                                                                 new Cell(CellStatus.Dead, CellStatus.Dead) ).ToArray()).ToArray();
-
-            Array.Resize(ref field.cells, field.FieldSize);
+            Field field = new Field(int.Parse(x[0]));
+            var t = x[1];
+             
+            for (int i = 0; i < field.FieldSize; i++)
+                for (int j = 0; j < field.FieldSize; j++)
+                    field.cells[i][j] = t[i * field.FieldSize + j] == '1' ? new Cell(CellStatus.Alive, CellStatus.Alive) :
+                                                                 new Cell(CellStatus.Dead, CellStatus.Dead);            
             return field;
         }
     }

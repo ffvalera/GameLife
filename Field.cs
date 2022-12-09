@@ -1,5 +1,12 @@
 ﻿namespace GameLife
 {
+    record class Cell(CellStatus status = CellStatus.Dead, CellStatus nextStatus = CellStatus.Dead)
+    {
+        public CellStatus Status = status;
+        public CellStatus NextStatus = nextStatus;
+        public int lifetime = 0;
+    };
+
     internal class Field
     {
         public int FieldSize = 20;
