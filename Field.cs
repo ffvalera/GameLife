@@ -3,7 +3,7 @@
     internal class Field
     {
         public int FieldSize = 20;
-        public Cell[][] cells = (new int[20]).Select(x => new Cell[20].Select(x => new Cell()).ToArray()).ToArray();
+        public Cell[][] cells;
 
         Coord[] Neighbors = { new Coord(1, 1), new Coord(0, 1), new Coord(-1, 1), new Coord(-1, 0),
             new Coord(-1, -1), new Coord(0, -1), new Coord(1, -1), new Coord(1, 0) };
@@ -39,7 +39,14 @@
 
                     else if ((alive_count < CountToLive || alive_count >= CountToDead) && cells[i][j].Status == CellStatus.Alive)
                         cells[i][j].NextStatus = CellStatus.Dead;
-                }            
+                }
         }
+        public Field(int size)
+        {
+            FieldSize = size;
+            cells = (new int[size]).Select(x => new int[size].Select(x => new Cell()).ToArray()).ToArray();
+            Coord.n = size;
+        }
+        
     }
 }

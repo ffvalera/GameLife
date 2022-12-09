@@ -27,14 +27,19 @@ namespace GameLife
 
     public partial class Form1 : Form
     {
-        Field field;
         const int CellSize = 20;
         const string cellName = "cell";
         Color DeadColor = Color.GreenYellow;
         Color AliveColor = Color.DeepPink;
-        FileController fc = new FileController();
-        Button[,] Buttons;
         
+        FileController fc = new FileController();
+        PictureBox pictureBox = new PictureBox();
+        System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+
+        int shiftx = 40, shifty = 2;
+        bool isPlayed = false;
+        Field field;
+
         public Form1()
         {
             InitializeComponent();
@@ -42,71 +47,50 @@ namespace GameLife
         }
         void Init()
         {
-            BackColor = Color.Black;            
+            BackColor = Color.White;
+
             field = fc.Download();
-            Coord.n = field.FieldSize;
+
+            textBox1.Text = field.FieldSize.ToString();
+
             this.FormClosing += new FormClosingEventHandler(Form_Closing);
-            CreateBoard(field);
+
+            pictureBox.Location = new Point(shiftx, shifty);
+            pictureBox.Size = new Size(field.FieldSize*CellSize+shiftx, field.FieldSize * CellSize + shifty);
+            pictureBox.MouseClick += Cell_click;
+            pictureBox.Paint += new PaintEventHandler(pictureBox1_Paint);
+            Controls.Add(pictureBox);
+
+            timer.Interval = 100; //интервал между срабатывани€ми 1000 миллисекунд
+            timer.Tick += new EventHandler(timer_Tick); //подписываемс€ на событи€ Tick
+            timer.Start();
         }
-        void CreateBoard(Field field)
-        {        
-            this.field = field;
-            Buttons = new Button[field.FieldSize, field.FieldSize];
+
+        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+        {    
+            Graphics g = e.Graphics;
 
             for (int i = 0; i < field.FieldSize; i++)
-            {
                 for (int j = 0; j < field.FieldSize; j++)
                 {
-                    Button button = new Button();
-
-                    button.Location = new Point(j * CellSize, i * CellSize);
-                    button.Size = new Size(CellSize, CellSize);
-                    button.MouseDown += new MouseEventHandler(Cell_click);
-                    button.Name = cellName;
-                    button.FlatAppearance.BorderSize = 1;
-                    button.FlatAppearance.BorderColor = Color.White;
-                    button.FlatStyle = FlatStyle.Flat;
-
-                    Cell cell = field.cells[i][j];
-                    UpdateButton(ref button, cell);
-                    button.Tag = new Coord(i, j);
-                    Buttons[i,j] = button;
-                    this.Controls.Add(Buttons[i, j]);
+                    Brush b = new SolidBrush(field.cells[i][j].Status == CellStatus.Dead ? DeadColor : AliveColor);
+                    g.FillRectangle(b, i * CellSize + shiftx, j * CellSize + shifty, CellSize, CellSize);
+                    g.DrawRectangle(new Pen(Color.White), i * CellSize + shiftx, j * CellSize + shifty, CellSize, CellSize);
                 }
-            }
         }
-        void UpdateBoard(Field? f)
+
+        void Cell_click(object sender, MouseEventArgs e)
         {
-            if (f == null)
+            int x = e.X, y = e.Y;
+            Coord c = new Coord((x - shiftx) / CellSize, (y - shifty) / CellSize);
+            if (c.X < 0 || c.X >= field.FieldSize || c.Y < 0 || c.Y >= field.FieldSize)
                 return;
-            field = f;
-            for (int i = 0; i < field.FieldSize; i++)
-                for (int j = 0; j < field.FieldSize; j++)
-                    UpdateButton(ref Buttons[i, j], f.cells[i][j]);
-        }
-        void UpdateButton(ref Button button, Cell cell)
-        {
-            if (cell.Status == CellStatus.Dead)
-            {
-                button.BackColor = DeadColor;
-            }
-            else
-            {
-                button.BackColor = AliveColor;
-            }
-        }
-       
-        
-        void Cell_click(object sender, EventArgs e)
-        {            
-            Button button = (Button)sender;
-            Cell cell = field[(Coord)button.Tag];
 
-            cell.Status = 1 - cell.Status;
-
-            UpdateButton(ref button, cell);
-            cell.NextStatus = cell.Status;
+            field[c].Status = 1 - field[c].Status;
+            field[c].NextStatus = field[c].Status;
+            pictureBox.Invalidate();
         }
+
         private void Form_Closing(object sender, FormClosingEventArgs e)
         {
             const string message = "—охранить текущее поле?";
@@ -116,47 +100,85 @@ namespace GameLife
             {
                 fc.Save(field);
             }
-        }  
-        private void Turn_click(object sender, EventArgs e)
-        {          
-            field.UpdateStatus();            
+        }
+        private void makeTurn()
+        {
+            field.UpdateStatus();
 
             for (int i = 0; i < field.FieldSize; i++)
                 for (int j = 0; j < field.FieldSize; j++)
                 {
                     field.cells[i][j].Status = field.cells[i][j].NextStatus;
-                    UpdateButton(ref Buttons[i, j], field.cells[i][j]);
                 }
+            pictureBox.Invalidate();
+        }
+        private void Turn_click(object sender, EventArgs e)
+        {
+            makeTurn();
         }
 
         private void Save_click(object sender, EventArgs e)
         {
             fc.Save(field, fc.GetFileNameForSaving());
         }
+
         private void Clear_Click(object sender, EventArgs e)
         {
-            for(int i = 0; i < field.FieldSize; i++)
-                for(int j = 0; j < field.FieldSize; j++)
-                {                
+            for (int i = 0; i < field.FieldSize; i++)
+                for (int j = 0; j < field.FieldSize; j++)
+                {
                     field.cells[i][j].Status = field.cells[i][j].NextStatus = CellStatus.Dead;
-                    UpdateButton(ref Buttons[i, j], field.cells[i][j]);
                 }
+            pictureBox.Invalidate();
         }
+
         private void Download_click(object sender, EventArgs e)
-        {         
-            UpdateBoard(fc.Download(fc.GetFileNameForDownloading()));
+        {
+            Field f = fc.Download(fc.GetFileNameForDownloading());
+            if (f != null)
+                field = f;
+            pictureBox.Invalidate();
         }
 
         private void Generate_Click(object sender, EventArgs e)
         {
-            Random r = new Random();
-            Field f = new Field();
+            Random r = new Random();            
 
             for (int i = 0; i < field.FieldSize; i++)
                 for (int j = 0; j < field.FieldSize; j++)
-                    f.cells[i][j].Status = f.cells[i][j].NextStatus = r.Next(2) == 0 ? CellStatus.Alive : CellStatus.Dead;
+                    field.cells[i][j].Status = field.cells[i][j].NextStatus = r.Next(2) == 0 ? CellStatus.Alive : CellStatus.Dead;
 
-            UpdateBoard(f);
+            pictureBox.Invalidate();
+        }
+
+
+        private void Play_Click(object sender, EventArgs e)
+        {
+            var b = sender as Button;
+            if (isPlayed)
+                b.Text = "Play";
+            else
+                b.Text = "Stop";
+            isPlayed = !isPlayed;
+            
+        }
+        void timer_Tick(object sender, EventArgs e)
+        {
+            if(isPlayed)
+                makeTurn(); 
+        }
+
+        private void Confirm_Click(object sender, EventArgs e)
+        {
+            int size; 
+
+            if (int.TryParse(textBox1.Text, out size))
+            {
+                field = new Field(size);
+                pictureBox.Size = new Size(field.FieldSize * CellSize + shiftx, field.FieldSize * CellSize + shifty);
+                pictureBox.Invalidate();
+            }
+            textBox1.Text = field.FieldSize.ToString();
         }
     }
 }

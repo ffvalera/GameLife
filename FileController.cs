@@ -6,18 +6,18 @@
         const string autosave = "autosave.txt";
         string standartField;
 
-        char stringN = ' ';
+        
         public FileController()
         {
-             standartField = String.Join(" ", (new int[20]).Select(s => "00000000000000000000"));
+             standartField = "20\n"+String.Join(" ", (new int[20]).Select(s => "00000000000000000000"));
         }
         public void Save(Field field, string fullname = PathToSaves + "/" + autosave)        
         {
             if(fullname == null)
                 return;
 
-            string s = "";
-            for (int i = 0; i < field.cells[0].Length; i++)
+            string s = field.FieldSize.ToString() + '\n';
+            for (int i = 0; i < field.cells.Length; i++)
             {
                 for (int j = 0; j < field.cells[0].Length; j++)
                 {
@@ -26,7 +26,7 @@
                     else
                         s += "0";
                 }
-                s += stringN;
+                s += ' ';
             }
 
             if (!File.Exists(fullname))
@@ -64,14 +64,16 @@
             else
                 s= standartField;
 
+            
 
-            Field field = new Field();
-
-            var t = s.Split(stringN).Select(x => x.ToCharArray());
+            var x = s.Split('\n');
+            Field field = new Field(int.Parse(x[0]));            
+            var t = x[1].Split(' ').Select(x => x.ToCharArray());
  
             field.cells = t.Select(x => x.Select(y => y == '1' ? new Cell(CellStatus.Alive, CellStatus.Alive):
-                                                                 new Cell(CellStatus.Dead, CellStatus.Dead) ).ToArray()).ToArray();  
-            field.cells.Resize(field.FieldSize);
+                                                                 new Cell(CellStatus.Dead, CellStatus.Dead) ).ToArray()).ToArray();
+
+            Array.Resize(ref field.cells, field.FieldSize);
             return field;
         }
     }
