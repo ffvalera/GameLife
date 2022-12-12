@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
-using System.Text.Json.Serialization.Metadata;
+﻿using System.Text;
 
 namespace GameLife
 {
@@ -13,15 +11,18 @@ namespace GameLife
         
         public FileController()
         {
-             standartField = "20\n"+String.Join("", (new int[20]).Select(s => "00000000000000000000"));
+             standartField = "20\n" + "20\n"+String.Join("", (new int[20]).Select(s => "00000000000000000000"));
         }
-        public void Save(Field field, string fullname = PathToSaves + "/" + autosave)        
+        public void Save(Field field, int CellSize, string fullname = PathToSaves + "/" + autosave)        
         {
             if(fullname == null)
                 return;
             
             StringBuilder sb = new StringBuilder(field.FieldSize*field.FieldSize + 10);
+
             sb.AppendLine(field.FieldSize.ToString());
+            sb.AppendLine(CellSize.ToString());
+
             for (int i = 0; i < field.cells.Length; i++)
             {
                 for (int j = 0; j < field.cells[0].Length; j++)
@@ -58,11 +59,13 @@ namespace GameLife
         {
             return GetFileName(new OpenFileDialog());
         }
-        public Field? Download(string fullname = PathToSaves + "/"+autosave)
+        public void Download(ref Field? field, ref int CellSize, string fullname = PathToSaves + "/"+autosave)
         {
             string? s;
             if (fullname == null)
-                return null;
+            {
+                field = null;
+            }
             if (File.Exists(fullname))
                 s= File.ReadAllText(fullname);
             else
@@ -71,14 +74,15 @@ namespace GameLife
             
 
             var x = s.Split('\n');
-            Field field = new Field(int.Parse(x[0]));
-            var t = x[1];
+            field = new Field(int.Parse(x[0]));
+            CellSize = int.Parse(x[1]);
+            var t = x[2];
              
             for (int i = 0; i < field.FieldSize; i++)
                 for (int j = 0; j < field.FieldSize; j++)
                     field.cells[i][j] = t[i * field.FieldSize + j] == '1' ? new Cell(CellStatus.Alive, CellStatus.Alive) :
                                                                  new Cell(CellStatus.Dead, CellStatus.Dead);            
-            return field;
+
         }
     }
 }
