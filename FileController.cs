@@ -6,14 +6,26 @@ namespace GameLife
     {
         const string PathToSaves = "../../../Saves";
         const string autosave = "autosave.txt";
-        string standartField;
-
-        
+        string standartField;        
         public FileController()
         {
-             standartField = "20\n" + "20\n"+String.Join("", (new int[20]).Select(s => "00000000000000000000"));
+             standartField = "20\n" + "20\n" +"000100000\n"+ "001100000\n" +String.Join("", (new int[20]).Select(s => "00000000000000000000"));
         }
-        public void Save(Field field, int CellSize, string fullname = PathToSaves + "/" + autosave)        
+        public void Save(Field field, int CellSize, string fullname = PathToSaves + "/" + autosave)
+        {
+            if (fullname == null)
+                return;
+            var t = fullname.Split('.').Last();
+            if (t == "txt")
+                SaveTxt(field, CellSize, fullname);
+            else if (t == "jpg")
+                SaveJpg(field, CellSize, fullname);
+
+        }
+        void SaveJpg(Field field, int CellSize, string fullname = PathToSaves + "/" + autosave)
+        {            
+        }
+        void SaveTxt(Field field, int CellSize, string fullname = PathToSaves + "/" + autosave)        
         {
             if(fullname == null)
                 return;
@@ -22,6 +34,8 @@ namespace GameLife
 
             sb.AppendLine(field.FieldSize.ToString());
             sb.AppendLine(CellSize.ToString());
+            sb.AppendLine(String.Join("", field.burn.Select(x => x ? '1' : '0')));
+            sb.AppendLine(String.Join("", field.live.Select(x => x ? '1' : '0')));
 
             for (int i = 0; i < field.cells.Length; i++)
             {
@@ -65,6 +79,7 @@ namespace GameLife
             if (fullname == null)
             {
                 field = null;
+                return;
             }
             if (File.Exists(fullname))
                 s= File.ReadAllText(fullname);
@@ -74,9 +89,12 @@ namespace GameLife
             
 
             var x = s.Split('\n');
-            field = new Field(int.Parse(x[0]));
+            int size = int.Parse(x[0]);            
             CellSize = int.Parse(x[1]);
-            var t = x[2];
+            var b = x[2].Where(c => c == '0' || c == '1').Select(c => c == '0' ? false : true).ToArray();
+            var l = x[3].Where(c => c == '0' || c == '1').Select(c => c == '0' ? false : true).ToArray();
+            field = new Field(int.Parse(x[0]), b, l);
+            var t = x[4];
              
             for (int i = 0; i < field.FieldSize; i++)
                 for (int j = 0; j < field.FieldSize; j++)

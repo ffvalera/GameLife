@@ -1,45 +1,23 @@
-using System.Diagnostics;
-using System.Drawing;
-using System.Globalization;
-
 namespace GameLife
 {
-    enum CellStatus
-    {
-        Alive=0, Dead=1
-    }
-
-    struct Coord
-    {
-        public int X;
-        public int Y;
-        public static int n;
-        public Coord(int x, int y)
-        {
-            X = x; Y = y;
-        }
-        public static Coord operator +(Coord a, Coord b)
-        {
-            return new Coord((a.X + b.X + n) % n, (a.Y + b.Y + n) % n);
-        }
-    }
-
-
     public partial class Form1 : Form
     {
 
         const string cellName = "cell";
         Color DeadColor = Color.GreenYellow;
         Color AliveColor = Color.DeepPink;
-        const int shiftx = 80, shifty = 2;
+        const int shiftx = 80, shifty = 20;
 
         FileController fc = new FileController();
         PictureBox pictureBox = new PictureBox();
         System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        Form3 form3 = new Form3();
 
 
         bool isPlayed = false;
-        Field field;
+        public int countOfMoves = 0;
+        public bool infCountOfMoves = true;
+        public Field field;
         int CellSize = 20;
         int movex = 0, movey = 0;
         int maxsize = 1000;
@@ -56,6 +34,8 @@ namespace GameLife
             fc.Download(ref field, ref CellSize);
 
             textBox1.Text = field.FieldSize.ToString();
+
+            form3.Owner = this;
 
             this.FormClosing += new FormClosingEventHandler(Form_Closing);
             this.MouseWheel += new MouseEventHandler(Pb_MouseWheel);
@@ -96,7 +76,7 @@ namespace GameLife
         void Cell_click(object sender, MouseEventArgs e)
         {
             int x = e.X, y = e.Y;
-            Coord c = new Coord((x - shiftx) / CellSize, (y - shifty) / CellSize);
+            Coord c = new Coord((x - movex) / CellSize, (y - movey) / CellSize);
             if (c.X < 0 || c.X >= field.FieldSize || c.Y < 0 || c.Y >= field.FieldSize)
                 return;
 
@@ -134,17 +114,12 @@ namespace GameLife
         
         private void Resize(int size)
         {
-            field = new Field(size);            
+            field = new Field(size, field.burn, field.live);            
             pictureBox.Invalidate();
         }
         private void Turn_click(object sender, EventArgs e)
         {
             makeTurn();
-        }
-
-        private void Save_click(object sender, EventArgs e)
-        {
-            fc.Save(field, CellSize, fc.GetFileNameForSaving());
         }
 
         private void Clear_Click(object sender, EventArgs e)
@@ -154,19 +129,6 @@ namespace GameLife
                 {
                     field.cells[i][j].Status = field.cells[i][j].NextStatus = CellStatus.Dead;
                 }
-            pictureBox.Invalidate();
-        }
-
-        private void Download_click(object sender, EventArgs e)
-        {
-            Field f = new Field(0);
-            int cellsize=0;
-            fc.Download(ref f, ref cellsize, fc.GetFileNameForDownloading());
-            if (f != null)
-            {
-                field = f;
-                CellSize = cellsize;
-            }
             pictureBox.Invalidate();
         }
 
@@ -185,16 +147,31 @@ namespace GameLife
         {
             var b = sender as Button;
             if (isPlayed)
-                b.Text = "Play";
+            {
+                b.Text = "Play";                                
+            }
             else
-                b.Text = "Stop";
-            isPlayed = !isPlayed;
-            
+            {
+                b.Text = "Stop";             
+            }
+            isPlayed = !isPlayed;            
         }
         void timer_Tick(object sender, EventArgs e)
         {
-            if(isPlayed)
-                makeTurn(); 
+            if (isPlayed)
+            {
+
+                if(!infCountOfMoves && countOfMoves <= 0)
+                {
+                    isPlayed = false;
+                    PlayButton.Text = "Play";
+                    return;
+                }
+                if (!infCountOfMoves && countOfMoves > 0)
+                    countOfMoves--;
+                makeTurn();
+            }
+            
         }
 
         void Confirm_Click(object sender, EventArgs e)
@@ -218,6 +195,39 @@ namespace GameLife
 
             this.Text = field[c].lifetime.ToString();
         }
+
+        private void RulesChange_Click(object sender, EventArgs e)
+        {
+            Form f = new Form2(ref field);
+            f.Owner = this;
+            f.ShowDialog();
+        }
+        private void Set_Click(object sender, EventArgs e)
+        {
+
+            form3.ShowDialog();
+
+        }
+        private void Save_Click_1(object sender, EventArgs e)
+        {
+            fc.Save(field, CellSize, fc.GetFileNameForSaving());
+        }
+
+        private void Download_Click_1(object sender, EventArgs e)
+        {
+            Field? f = null;
+            int cellsize = 0;
+            fc.Download(ref f, ref cellsize, fc.GetFileNameForDownloading());
+            if (f != null)
+            {
+                field = f;
+                CellSize = cellsize;
+            }
+            pictureBox.Invalidate();
+        }
+
+        
+
         void Pb_MouseWheel(object sender, MouseEventArgs e)
         {
             int a = e.Delta/20;
@@ -227,19 +237,6 @@ namespace GameLife
                 pictureBox.Invalidate();
             }
         }
-
-        //private void Pb_keyDown(object sender, KeyPressEventArgs e)
-        //{
-        //    if (e.KeyChar == (char)Keys.W)
-        //        movey++;
-        //    if (e.KeyChar == (char)Keys.S)
-        //        movey--;
-        //    if (e.KeyChar ==(char) Keys.D)
-        //        movex++;
-        //    if (e.KeyChar == (char)Keys.A)
-        //        movex--;
-        //    pictureBox.Invalidate();
-        //}
         private void Pb_keyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.W)
